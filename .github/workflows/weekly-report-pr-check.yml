@@ -44,7 +44,7 @@ jobs:
           DEFAULT_VALUE="待填写"
 
           weeklyReports=()
-          for file in ${changedFiles}; do
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
               file_basename=$(basename $file)
               echo "file_basename="${file_basename}
               if [[ "$file_basename" =~ \[WeeklyReport\] ]]; then
@@ -53,7 +53,7 @@ jobs:
           done
           
           if [ ${#weeklyReports[@]} -eq 0 ]; then
-              echo "没有周报文件, 或周报文件不符合命名要求: ${changedFiles}"
+              echo "没有周报文件, 或周报文件不符合命名要求: ${{ steps.changed-files.outputs.all_changed_files }}"
               exit 0
           fi
           
