@@ -39,21 +39,59 @@ jobs:
             echo "$file was changed"
           done
 
-      # - name: Check Mentor Comment
-      #   run: |
-      #       changedFiles=$(git diff --name-only HEAD^)
-      #       # Check if the PR contains markdown files
-      #       if ! git diff --name-only --diff-filter=AMR --cached | grep -qE '\.md$'; then
-      #           echo "PR does not contain markdown files. Assume the PR is not a `Weekly Report`."
-      #           exit 0
-      #       fi
+      - name: Check Weekly Report
+        run: |
+          DEFAULT_VALUE="待填写"
 
-      #       # Check if the PR contains weekly report files
-      #       if git diff --name-only --diff-filter=AMR --cached | xargs grep -qE '### 实习项目.*\n.*### 本周工作'; then
-      #           echo "PR contains weekly report files"
-      #           # Check if the weekly report files contain mentor review section
-      #           if ! git diff --name-only --diff-filter=AMR --cached | xargs grep -qE '### 导师点评.*\n.*[^待填写]'; then
-      #               echo "Mentor review section is missing or empty"
-      #               exit 1
-      #           fi
-      #       fi
+          weeklyReports=()
+          for file in ${changedFiles}; do
+              file_basename=$(basename $file)
+              if [[ "$file_basename" =~ \[WeeklyReport\] ]]; then
+                  weeklyReports+=("$file")
+              fi
+          done
+          
+          if [ ${#weeklyReports[@]} -eq 0 ]; then
+              echo "没有周报文件, 或周报文件不符合命名要求: ${changedFiles}"
+              exit 0
+          fi
+          
+          # 检查文件是否包含 "### 导师点评" 字段以及该字段所在行下面的内容是否为空或者为 ${DEFAULT_VALUE}
+          function check_tutor_review() {
+              if grep -q "### 导师点评" "$1"; then
+                  line_number=$(grep -n "### 导师点评" "$1" | cut -d ":" -f 1)
+                  
+                  count=1
+                  while [ $count -le 5 ]
+                  do
+                      next_line=$(($line_number + $count))
+                      next_line_content=$(sed -n "${next_line}p" "$1" | tr -d '[:space:]')
+                      if [[ -n "$next_line_content" && "$next_line_content" != ${DEFAULT_VALUE} ]]; then
+                          return 0
+                      fi
+          
+                      count=$((count+1))
+                  done
+          
+                  echo "failed: $1 \"### 导师点评\" 字段下面${count}行内容为空"
+                  return 1
+              else
+                  echo "failed: $1 没有字段 \"### 导师点评\""
+                  return 1
+              fi
+          }
+          
+          
+          # 检查所有文件
+          for file in ${weeklyReports}; do
+              if check_tutor_review "$file"; then
+                  echo "$file 符合要求"
+              else
+                  echo "$file 导师点评内容缺失."
+                  echo "如有疑问, 请联系助教 MarioLulab"
+                  exit 1
+              fi
+          done
+          
+          echo "所有文件都符合要求"
+          exit 0
