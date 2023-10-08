@@ -46,6 +46,7 @@ jobs:
           weeklyReports=()
           for file in ${changedFiles}; do
               file_basename=$(basename $file)
+              echo "file_basename="${file_basename}
               if [[ "$file_basename" =~ \[WeeklyReport\] ]]; then
                   weeklyReports+=("$file")
               fi
