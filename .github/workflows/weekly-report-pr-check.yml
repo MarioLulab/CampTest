@@ -17,6 +17,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check Filenames without White Space
+        run: |
+          # Find all files with spaces in their names
+          files_with_spaces=$(find . -name "* *" -type f)
+
+          # If any files with spaces are found, output an error message and fail the job
+          if [ -n "$files_with_spaces" ]; then
+            echo "Error: The following files have spaces in their names:"
+            echo "$files_with_spaces"
+            exit 1
+          fi
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v14.6
